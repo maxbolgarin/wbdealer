@@ -53,11 +53,9 @@ class TelegramPublisher:
         for p in products:
             nm_id = p["nm_id"]
             name = p["display_name"]
-            raw_emoji = p["emoji_rating"]
-            emoji = emoji_map.get(raw_emoji, raw_emoji)
             price = p["price_rub"]
             url = f"https://www.wildberries.ru/catalog/{nm_id}/detail.aspx"
-            lines.append(f'»  {name}: <a href="{url}">{nm_id}</a> {emoji} {price}₽')
+            lines.append(f'»  <b>{name}</b>: <a href="{url}">{nm_id}</a> {e_top} {price}₽')
 
         lines.append("")
         lines.append("— — — — — — —")

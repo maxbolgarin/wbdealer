@@ -1,8 +1,11 @@
 import asyncio
 import io
+import logging
 
 import httpx
 from PIL import Image, ImageDraw
+
+logger = logging.getLogger(__name__)
 
 
 class CollageBuilder:
@@ -88,33 +91,50 @@ class CollageBuilder:
 
     @staticmethod
     async def _download_images(urls: list[str]) -> list[Image.Image]:
-        async def _download_one(client: httpx.AsyncClient, url: str) -> Image.Image:
-            # Try the given URL, then fallback to other image indices
-            attempts = [url]
-            # If URL ends with /1.webp, also try /2.webp, /3.webp
-            for i in range(2, 5):
-                attempts.append(url.rsplit("/", 1)[0] + f"/{i}.webp")
-
-            for attempt_url in attempts:
-                for retry in range(2):
-                    try:
-                        response = await client.get(attempt_url)
-                        if response.status_code == 200 and len(response.content) > 100:
-                            return Image.open(io.BytesIO(response.content)).convert("RGBA")
-                    except Exception:
-                        pass
-                    await asyncio.sleep(0.5)
-
-            return Image.new("RGBA", (400, 400), (200, 200, 200, 255))
+        """Download images sequentially to avoid CDN rate limits."""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+            "Accept": "image/webp,image/avif,image/*,*/*;q=0.8",
+            "Referer": "https://www.wildberries.ru/",
+        }
+        results: list[Image.Image] = []
 
         async with httpx.AsyncClient(
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-                "Accept": "image/webp,image/avif,image/*,*/*;q=0.8",
-                "Referer": "https://www.wildberries.ru/",
-            },
-            timeout=15.0,
-            follow_redirects=True,
+            headers=headers, timeout=15.0, follow_redirects=True,
         ) as client:
-            tasks = [_download_one(client, url) for url in urls]
-            return await asyncio.gather(*tasks)
+            for idx, url in enumerate(urls):
+                img = None
+                # Try original URL and fallback to other image indices
+                attempt_urls = [url]
+                for i in range(2, 5):
+                    attempt_urls.append(url.rsplit("/", 1)[0] + f"/{i}.webp")
+
+                for attempt_url in attempt_urls:
+                    for retry in range(3):
+                        try:
+                            resp = await client.get(attempt_url)
+                            if resp.status_code == 200 and len(resp.content) > 500:
+                                img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+                                break
+                            elif resp.status_code == 429:
+                                await asyncio.sleep(2)
+                            else:
+                                break
+                        except Exception as e:
+                            logger.warning(f"Image download error {attempt_url}: {e}")
+                            await asyncio.sleep(1)
+                    if img:
+                        break
+
+                if img:
+                    logger.info(f"Image {idx + 1}/{len(urls)}: OK")
+                else:
+                    logger.warning(f"Image {idx + 1}/{len(urls)}: FAILED, using placeholder")
+                    img = Image.new("RGBA", (400, 400), (200, 200, 200, 255))
+                results.append(img)
+
+                # Small delay between downloads to avoid rate limits
+                if idx < len(urls) - 1:
+                    await asyncio.sleep(0.5)
+
+        return results
