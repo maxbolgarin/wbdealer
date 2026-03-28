@@ -84,7 +84,7 @@ class Pipeline:
             collage_bytes = await self.collage.build(image_urls)
 
             # 6. Format and publish
-            caption = TelegramPublisher.format_post(title=curated["title"], products=curated_full)
+            caption = self.publisher.format_post(title=curated["title"], products=curated_full)
             message_id = await self.publisher.publish_post(collage_bytes, caption)
 
             # 7. Record in history

@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     max_price_rub: int = 10000
     min_discount_pct: int = 15
 
+    # Кастомные эмодзи Telegram (ID или пустая строка для дефолтных Unicode)
+    emoji_top: str = ""       # 💰 — отличная цена
+    emoji_good: str = ""      # 👍 — топ
+    emoji_bad: str = ""       # 👎 — не очень
+    emoji_expensive: str = "" # 😱 — дорого
+
     # Коллаж
     collage_width: int = 1080
     collage_height: int = 1080

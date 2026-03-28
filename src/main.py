@@ -29,7 +29,13 @@ async def main():
     search_client = WBSearchClient()
     curator = AICurator(settings.openrouter_api_key, settings.openrouter_base_url, settings.openrouter_model)
     collage_builder = CollageBuilder(settings)
-    publisher = TelegramPublisher(bot, settings.telegram_chat_id)
+    emoji_ids = {
+        "top": settings.emoji_top,
+        "good": settings.emoji_good,
+        "bad": settings.emoji_bad,
+        "expensive": settings.emoji_expensive,
+    }
+    publisher = TelegramPublisher(bot, settings.telegram_chat_id, emoji_ids)
 
     pipeline = Pipeline(settings, search_client, curator, collage_builder, publisher, storage)
 

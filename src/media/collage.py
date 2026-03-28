@@ -89,20 +89,32 @@ class CollageBuilder:
     @staticmethod
     async def _download_images(urls: list[str]) -> list[Image.Image]:
         async def _download_one(client: httpx.AsyncClient, url: str) -> Image.Image:
-            try:
-                response = await client.get(url)
-                response.raise_for_status()
-                return Image.open(io.BytesIO(response.content)).convert("RGBA")
-            except Exception:
-                # Return gray placeholder on failure
-                return Image.new("RGBA", (400, 400), (200, 200, 200, 255))
+            # Try the given URL, then fallback to other image indices
+            attempts = [url]
+            # If URL ends with /1.webp, also try /2.webp, /3.webp
+            for i in range(2, 5):
+                attempts.append(url.rsplit("/", 1)[0] + f"/{i}.webp")
+
+            for attempt_url in attempts:
+                for retry in range(2):
+                    try:
+                        response = await client.get(attempt_url)
+                        if response.status_code == 200 and len(response.content) > 100:
+                            return Image.open(io.BytesIO(response.content)).convert("RGBA")
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.5)
+
+            return Image.new("RGBA", (400, 400), (200, 200, 200, 255))
 
         async with httpx.AsyncClient(
             headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                "Accept": "image/webp,image/avif,image/*,*/*;q=0.8",
                 "Referer": "https://www.wildberries.ru/",
             },
             timeout=15.0,
+            follow_redirects=True,
         ) as client:
             tasks = [_download_one(client, url) for url in urls]
             return await asyncio.gather(*tasks)
