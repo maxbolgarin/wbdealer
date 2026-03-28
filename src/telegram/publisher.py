@@ -37,8 +37,8 @@ class TelegramPublisher:
         self,
         title: str,
         products: list[dict],
-        channel_name: str = "Мужской Wildberries",
-        channel_url: str = "",
+        channel_name: str = "охуенный шмот с вб",
+        channel_url: str = "https://t.me/wbsuperdeals",
     ) -> str:
         e_top = _emoji(DEFAULT_EMOJI["top"], self.emoji_ids.get("top", ""))
         e_good = _emoji(DEFAULT_EMOJI["good"], self.emoji_ids.get("good", ""))
@@ -59,13 +59,6 @@ class TelegramPublisher:
             lines.append(f'{price}₽ {e_top} <a href="{url}">{nm_id}</a>')
             lines.append("")
 
-        lines.append("")
-        lines.append("— — — — — — —")
-        lines.append("")
-        lines.append(f"<blockquote>{e_good} - Топ")
-        lines.append(f"{e_bad} - Не очень")
-        lines.append(f"{e_expensive} - Дорого</blockquote>")
-        lines.append("")
         lines.append("— — — — — — — — —")
         lines.append("")
         if channel_url:

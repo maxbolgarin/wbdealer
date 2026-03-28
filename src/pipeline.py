@@ -78,7 +78,9 @@ class Pipeline:
                 nm_id = item["nm_id"]
                 if nm_id in product_map:
                     product = product_map[nm_id]
-                    image_urls.append(product.image_urls[0])
+                    # Use image #2 (index 1) — first image is usually infographic
+                    img_idx = 1 if len(product.image_urls) > 1 else 0
+                    image_urls.append(product.image_urls[img_idx])
                     curated_full.append({**item, "price_rub": product.price_rub})
 
             collage_bytes = await self.collage.build(image_urls)
