@@ -27,7 +27,7 @@ HEADERS = {
     "Sec-Fetch-Site": "cross-site",
 }
 
-# (upper_bound, basket_suffix)
+# (upper_bound, basket_suffix) — updated March 2026
 _BASKET_RANGES: list[tuple[int, str]] = [
     (143, "01"),
     (287, "02"),
@@ -46,6 +46,15 @@ _BASKET_RANGES: list[tuple[int, str]] = [
     (2405, "15"),
     (2621, "16"),
     (2837, "17"),
+    (3053, "18"),
+    (3269, "19"),
+    (3485, "20"),
+    (3693, "21"),
+    (3855, "22"),
+    (4059, "23"),
+    (4143, "24"),
+    (4389, "25"),
+    (4600, "26"),
 ]
 
 
@@ -137,7 +146,7 @@ class WBSearchClient:
         vol = nm_id // 100000
         part = nm_id // 1000
 
-        basket = "18"
+        basket = "27"
         for upper_bound, suffix in _BASKET_RANGES:
             if vol <= upper_bound:
                 basket = suffix
