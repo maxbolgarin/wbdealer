@@ -92,13 +92,13 @@ class WBSearchClient:
                     continue
                 response.raise_for_status()
                 data = response.json()
-                logger.info(f"WB response keys: {list(data.keys())}, products path: data.products={len(data.get('data', {}).get('products', []))}, top-level products={len(data.get('products', []))}")
                 break
             else:
                 logger.error(f"WB search failed after {MAX_RETRIES} retries for '{query}'")
                 return []
 
-        items = data.get("data", {}).get("products", [])
+        # v18: products are at top level, not under "data"
+        items = data.get("products", []) or data.get("data", {}).get("products", [])
 
         products: list[Product] = []
         for item in items:
