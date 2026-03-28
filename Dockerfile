@@ -13,6 +13,5 @@ COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 
 COPY src/ src/
-COPY assets/ assets/
 
 CMD ["python", "-m", "src.main"]
