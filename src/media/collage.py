@@ -104,10 +104,13 @@ class CollageBuilder:
         ) as client:
             for idx, url in enumerate(urls):
                 img = None
-                # Try original URL and fallback to other image indices
+                # Try original URL, then fallback to image 1 (always exists), then others
                 attempt_urls = [url]
-                for i in range(2, 5):
-                    attempt_urls.append(url.rsplit("/", 1)[0] + f"/{i}.webp")
+                base = url.rsplit("/", 1)[0]
+                for i in [1, 2, 3, 4]:
+                    fallback = base + f"/{i}.webp"
+                    if fallback != url and fallback not in attempt_urls:
+                        attempt_urls.append(fallback)
 
                 for attempt_url in attempt_urls:
                     for retry in range(3):

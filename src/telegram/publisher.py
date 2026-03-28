@@ -55,8 +55,7 @@ class TelegramPublisher:
             name = p["display_name"]
             price = p["price_rub"]
             url = f"https://www.wildberries.ru/catalog/{nm_id}/detail.aspx"
-            lines.append(f"»  <b>{name}</b>")
-            lines.append(f'{price}₽ {e_top} <a href="{url}">{nm_id}</a>')
+            lines.append(f'»  <b>{name}</b> — {price}₽ {e_top} <a href="{url}">{nm_id}</a>')
             lines.append("")
 
         lines.append("— — — — — — — — —")
