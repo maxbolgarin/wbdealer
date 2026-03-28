@@ -1,21 +1,30 @@
 import asyncio
+import logging
 import random
 
 import httpx
 
 from src.wb.product import Product
 
-BASE_URL = "https://search.wb.ru/exactmatch/ru/common/v7/search"
+logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+
+BASE_URL = "https://search.wb.ru/exactmatch/ru/common/v18/search"
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/131.0.0.0 Safari/537.36"
+        "Chrome/134.0.0.0 Safari/537.36"
     ),
-    "Accept": "application/json",
+    "Accept": "*/*",
+    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
     "Origin": "https://www.wildberries.ru",
     "Referer": "https://www.wildberries.ru/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "cross-site",
 }
 
 # (upper_bound, basket_suffix)
@@ -53,13 +62,16 @@ class WBSearchClient:
     ) -> list[Product]:
         """Ищет товары на WB и возвращает список Product."""
         params: dict[str, str | int] = {
+            "appType": 1,
+            "curr": "rub",
+            "dest": -1257786,
+            "lang": "ru",
+            "page": 1,
             "query": query,
             "resultset": "catalog",
-            "limit": limit,
             "sort": sort,
-            "dest": -1257786,
-            "curr": "rub",
             "spp": 30,
+            "suppressSpellcheck": "false",
         }
 
         if min_rating:
@@ -69,21 +81,41 @@ class WBSearchClient:
             min_price, max_price = price_range
             params["priceU"] = f"{min_price * 100};{max_price * 100}"
 
+        data = {}
         async with httpx.AsyncClient(headers=HEADERS, timeout=15) as client:
-            response = await client.get(BASE_URL, params=params)
-            response.raise_for_status()
-            data = response.json()
+            for attempt in range(MAX_RETRIES):
+                response = await client.get(BASE_URL, params=params)
+                if response.status_code == 429:
+                    delay = 2 ** (attempt + 1) + random.uniform(1, 3)
+                    logger.warning(f"WB 429, retry {attempt + 1}/{MAX_RETRIES} after {delay:.1f}s")
+                    await asyncio.sleep(delay)
+                    continue
+                response.raise_for_status()
+                data = response.json()
+                break
+            else:
+                logger.error(f"WB search failed after {MAX_RETRIES} retries for '{query}'")
+                return []
 
         items = data.get("data", {}).get("products", [])
 
         products: list[Product] = []
         for item in items:
+            # v18: prices are in sizes[].price; fall back to top-level fields
+            sale_price = item.get("salePriceU", 0)
+            orig_price = item.get("priceU", 0)
+            sizes = item.get("sizes", [])
+            if sizes and "price" in sizes[0]:
+                price_info = sizes[0]["price"]
+                sale_price = price_info.get("product", sale_price)
+                orig_price = price_info.get("basic", orig_price)
+
             product = Product(
                 nm_id=item["id"],
                 name=item.get("name", ""),
                 brand=item.get("brand", ""),
-                price_rub=item.get("salePriceU", 0) // 100,
-                original_price_rub=item.get("priceU", 0) // 100,
+                price_rub=sale_price // 100,
+                original_price_rub=orig_price // 100,
                 discount_pct=item.get("sale", 0),
                 rating=item.get("rating", 0),
                 feedbacks=item.get("feedbacks", 0),
